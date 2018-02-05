@@ -3,14 +3,14 @@ const fs = require('fs');
 const util = require('util');
 const moment = require('moment');
 
-async function filterResults(page, date) {
+async function filterResults(page, startDate, endDate) {
     const startDateSelector = 'input[name=ddmmaa1]';
     await page.waitForSelector(startDateSelector);
-    await page.type(startDateSelector, date);
+    await page.type(startDateSelector, startDate);
     
     const endDateSelector = 'input[name=ddmmaa2]';
     await page.waitForSelector(endDateSelector);
-    await page.type(endDateSelector, date);
+    await page.type(endDateSelector, endDate);
 
     const stateSelector = 'input[name^=estado][value=SP]';
     await page.waitForSelector(stateSelector)
@@ -72,15 +72,18 @@ async function gotoNextPage(page) {
 
 (async () => {
     try {
-        let yesterday = moment().subtract(1, 'days').format('DD/MM/YY');
-        console.log('scrape date = ' + yesterday);
+        const today = moment().format('DD/MM/YY');
+        console.log('scrape date = ' + today);
+
+        const startDate = today;
+        const endDate = today;
 
         const browser = await puppeteer.launch();
         const page = await browser.newPage();
         await page.setViewport({width: 1366, height: 768});
         await page.goto('http://www.apinfo.com/apinfo/inc/list4.cfm');
         
-        await filterResults(page, startDate);
+        await filterResults(page, startDate, endDate);
 
         let totalPages = await getTotalPages(page);
         let allResults = [];
@@ -94,7 +97,7 @@ async function gotoNextPage(page) {
         
         await browser.close();
 
-        fs.writeFile(util.format('file_scraped_%s.json', yesterday.replace('/', '-')), JSON.stringify(allResults), (err) => {  
+        fs.writeFile(util.format('file_scraped_%s.json', today.replace(/[/]/g, '-')), JSON.stringify(allResults), (err) => {  
             if (err) throw err;
             console.log('File saved!');
         });
