@@ -17,6 +17,7 @@ async function filterResults(page, startDate, endDate) {
     await page.click(stateSelector);
 
     // Sao Paulo, Sao Caetano, Santo Andre, Sao Bernardo
+    await page.waitForSelector('.n-paginas');
     const codCities = [1000, 9500, 9000, 9600];
     for (var i = 0; i < codCities.length; i++) {
         const citySelector = 'input[name^=cod_cidade][value="' + codCities[i] + '"]';
@@ -24,15 +25,18 @@ async function filterResults(page, startDate, endDate) {
             await page.click(citySelector);
         }
     }
-    
-    await page.click('#form-busca input[type=submit]');
+    await Promise.all([
+        page.click('#form-busca input[type=submit]'),
+        page.waitForNavigation({ waitUntil: 'networkidle0' }),
+    ]);
 }
 
 async function getTotalPages(page) {
     await page.waitForSelector('.n-paginas');
     return await page.evaluate(() => {
         let paginationText = document.querySelector('.n-paginas').innerText;
-        let pageAndTotal = paginationText.match(/\d/g);
+        console.log('paginationText=' + paginationText);
+        let pageAndTotal = paginationText.match(/\d+/g);
         return parseInt(pageAndTotal[1], 10);
     });
 }
@@ -78,10 +82,12 @@ async function gotoNextPage(page) {
         const startDate = today;
         const endDate = today;
 
+        //const browser = await puppeteer.launch({headless: false, slowMo: 250});
         const browser = await puppeteer.launch();
         const page = await browser.newPage();
-        await page.setViewport({width: 1366, height: 768});
+        await page.setViewport({width: 1920, height: 1080});
         await page.goto('http://www.apinfo.com/apinfo/inc/list4.cfm');
+        await page.on('console', msg => console.log('PAGE LOG:', msg.text()));
         
         await filterResults(page, startDate, endDate);
 
