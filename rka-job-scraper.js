@@ -32,6 +32,18 @@ async function filterResults(page, startDate, endDate) {
 }
 
 async function getTotalPages(page) {
+    await page.waitForSelector('.principal');
+    let isEmptyResult = await page.evaluate(() => {
+        let texto = document.querySelector('.principal').innerText;
+        if (texto.includes('A pesquisa não retornou nenhum resultado')) {
+            return true;
+        }
+        return false;
+    });
+    if (isEmptyResult) {
+        return 0;
+    }
+
     await page.waitForSelector('.n-paginas');
     return await page.evaluate(() => {
         let paginationText = document.querySelector('.n-paginas').innerText;
@@ -75,15 +87,17 @@ async function gotoNextPage(page) {
 }
 
 (async () => {
+    // const today = moment().format('DD/MM/YY');
+    const today = '11/02/18';
+    console.log('scrape date = ' + today);
+
+    const startDate = today;
+    const endDate = today;
+
+    let browser = null;
     try {
-        const today = moment().format('DD/MM/YY');
-        console.log('scrape date = ' + today);
-
-        const startDate = today;
-        const endDate = today;
-
-        //const browser = await puppeteer.launch({headless: false, slowMo: 250});
-        const browser = await puppeteer.launch();
+        browser = await puppeteer.launch({headless: false});
+        // browser = await puppeteer.launch();
         const page = await browser.newPage();
         await page.setViewport({width: 1920, height: 1080});
         await page.goto('http://www.apinfo.com/apinfo/inc/list4.cfm');
@@ -101,13 +115,19 @@ async function gotoNextPage(page) {
             console.log('pagina=' + i++ + ' de ' + totalPages);
         }
         
-        await browser.close();
-
-        fs.writeFile(util.format('file_scraped_%s.json', today.replace(/[/]/g, '-')), JSON.stringify(allResults), (err) => {  
-            if (err) throw err;
-            console.log('File saved!');
-        });
+        if (allResults.length > 0) {
+            fs.writeFile(util.format('file_scraped_%s.json', today.replace(/[/]/g, '-')), JSON.stringify(allResults), (err) => {  
+                if (err) throw err;
+                console.log('File saved!');
+            });
+        } else {
+            console.log('Nao houveram resultados');
+        }
     } catch (error) {
         console.log(error);
+    } finally {
+        if (browser != null) {
+            await browser.close();
+        }
     }
 })();
